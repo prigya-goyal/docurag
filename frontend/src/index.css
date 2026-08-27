@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Ink — dark mode surfaces */
+  --color-ink-950: #0a0e14;
+  --color-ink-900: #10151d;
+  --color-ink-800: #171e28;
+  --color-ink-700: #202a37;
+  --color-ink-600: #2c3847;
+  --color-ink-500: #48566a;
+  --color-ink-400: #6b7a90;
+  --color-ink-300: #97a3b5;
+  --color-ink-200: #c3cbd6;
+  --color-ink-100: #e4e8ee;
+  --color-ink-50: #f5f7fa;
+
+  /* Amber — evidence / citation accent */
+  --color-amber-600: #b9770e;
+  --color-amber-500: #e0973e;
+  --color-amber-400: #f0ab54;
+
+  /* Teal — grounded / high confidence */
+  --color-teal-600: #0d9488;
+  --color-teal-500: #14b8a6;
+  --color-teal-400: #2dd4bf;
+
+  /* Rose — low confidence / errors */
+  --color-rose-600: #be123c;
+  --color-rose-500: #f43f5e;
+
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-ink-50);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark body {
+  background-color: var(--color-ink-950);
+  color: var(--color-ink-100);
+}
+
+::selection {
+  background: var(--color-amber-400);
+  color: var(--color-ink-950);
+}
+
+/* Citation badge — the signature element: a highlighter-tab style inline mark */
+.citation-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-amber-500) 22%, transparent);
+  color: var(--color-amber-600);
+  border: 1px solid color-mix(in srgb, var(--color-amber-500) 45%, transparent);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+  vertical-align: middle;
+  margin: 0 1px;
+}
+.citation-mark:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--color-amber-500) 35%, transparent);
+}
+.dark .citation-mark {
+  color: var(--color-amber-400);
+}
+
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(220%); }
+}
+.scan-line {
+  position: relative;
+  overflow: hidden;
+}
+.scan-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-teal-400) 35%, transparent), transparent);
+  animation: scan 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-line::after { animation: none; }
+}
