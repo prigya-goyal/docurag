@@ -10,10 +10,13 @@ class OpenAILLMProvider(LLMProvider):
         self.client = OpenAI(api_key=api_key)
         self.model = model
 
-    def generate(self, system: str, user: str, max_tokens: int = 1024) -> str:
-        response = self.client.chat.completions.create(
+        def generate(self, system: str, user: str, max_tokens: int = 1024) -> str:
+            response = self.client.chat.completions.create(
             model=self.model,
             max_tokens=max_tokens,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         )
+        if response.usage:
+            self.last_input_tokens = response.usage.prompt_tokens
+            self.last_output_tokens = response.usage.completion_tokens
         return response.choices[0].message.content or ""

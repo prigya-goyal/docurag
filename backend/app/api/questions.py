@@ -1,10 +1,10 @@
 import json
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_owned_knowledge_base
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.models import Chunk, Document, User
 from app.schemas.schemas import QuestionGenRequest
 from app.services.llm.factory import get_llm_provider
@@ -23,7 +23,8 @@ Every question must be answerable from the cited excerpt. Do not invent facts no
 
 
 @router.post("")
-def generate_questions(kb_id: str, payload: QuestionGenRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@limiter.limit("10/minute")
+def generate_questions(request: Request, kb_id: str, payload: QuestionGenRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     kb = get_owned_knowledge_base(kb_id, db, user)
     doc = db.query(Document).filter(Document.id == payload.document_id, Document.knowledge_base_id == kb.id).first()
     if not doc:

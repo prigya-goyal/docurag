@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_owned_knowledge_base
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.models import Document, User
 from app.schemas.schemas import CompareRequest
 from app.services.llm.factory import get_llm_provider
@@ -18,7 +19,8 @@ If the excerpts don't contain enough overlapping content to compare, say so expl
 
 
 @router.post("")
-def compare_documents(kb_id: str, payload: CompareRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@limiter.limit("10/minute")
+def compare_documents(request: Request, kb_id: str, payload: CompareRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     kb = get_owned_knowledge_base(kb_id, db, user)
 
     docs = db.query(Document).filter(Document.knowledge_base_id == kb.id, Document.id.in_(payload.document_ids)).all()

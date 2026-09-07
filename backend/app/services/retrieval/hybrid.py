@@ -1,16 +1,8 @@
-"""
-Hybrid retrieval: fuses semantic (vector) and keyword (BM25) candidate sets.
-
-Each retriever is queried independently for `RETRIEVAL_CANDIDATES` results,
-then merged by chunk_id. Missing scores (a chunk that only one retriever
-surfaced) default to 0 for the other signal rather than being dropped —
-this is what lets BM25 rescue an exact-match chunk that vector search
-ranked poorly, and vice versa.
-"""
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from app.core.cache import make_key, retrieval_cache
 from app.core.config import get_settings
 from app.services.embeddings.factory import get_embedding_provider
 from app.services.retrieval.bm25_search import bm25_search
@@ -24,6 +16,17 @@ def hybrid_retrieve(
     document_ids: list[str] | None = None,
 ) -> list[dict]:
     settings = get_settings()
+
+    # Cache repeated retrieval queries (spec section 31): identical question
+    # + KB + document filter within the TTL window skips vector search, BM25,
+    # and the merge/scoring step entirely.
+    cache_key = make_key(
+        "hybrid_retrieve", knowledge_base_id, query, ",".join(sorted(document_ids or []))
+    )
+    cached = retrieval_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     n = settings.RETRIEVAL_CANDIDATES
 
     embedder = get_embedding_provider()
@@ -69,4 +72,5 @@ def hybrid_retrieve(
         )
 
     candidates.sort(key=lambda c: c["hybrid_score"], reverse=True)
+    retrieval_cache.set(cache_key, candidates)
     return candidates

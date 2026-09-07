@@ -1,12 +1,13 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_owned_knowledge_base
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.models import Document, ProcessingStatus, User
 from app.schemas.schemas import DocumentOut
 from app.services.processing.pipeline import delete_document_from_indexes, process_document
@@ -25,7 +26,9 @@ def _validate_upload(file: UploadFile, size_bytes: int) -> str:
 
 
 @router.post("/upload", response_model=list[DocumentOut])
+@limiter.limit("20/minute")
 async def upload_documents(
+    request: Request,
     kb_id: str,
     background_tasks: BackgroundTasks,
     files: list[UploadFile],

@@ -1,11 +1,12 @@
 from contextlib import contextmanager
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_owned_knowledge_base
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.models import EvalQuestion, EvalRun, User
 from app.schemas.schemas import EvalQuestionCreate, EvalRunRequest
 from app.services.eval.evaluator import run_evaluation
@@ -71,7 +72,8 @@ def delete_eval_question(kb_id: str, question_id: str, db: Session = Depends(get
 
 
 @router.post("/run")
-def run_eval(kb_id: str, payload: EvalRunRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@limiter.limit("3/minute")
+def run_eval(request: Request, kb_id: str, payload: EvalRunRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     get_owned_knowledge_base(kb_id, db, user)
 
     with _apply_config_overrides(payload.config):

@@ -26,8 +26,13 @@ class GeminiProvider(LLMProvider):
         )
         text = response.text
         if not text:
+            # Thinking (or a safety filter) consumed the whole budget with nothing
+            # left for visible output. Surface this clearly instead of returning "".
             finish_reason = None
             if response.candidates:
                 finish_reason = response.candidates[0].finish_reason
             raise RuntimeError(f"Gemini returned no output text (finish_reason={finish_reason}).")
+        if response.usage_metadata:
+            self.last_input_tokens = response.usage_metadata.prompt_token_count
+            self.last_output_tokens = response.usage_metadata.candidates_token_count
         return text

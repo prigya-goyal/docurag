@@ -147,6 +147,9 @@ class Message(Base):
     generation_latency_ms: Mapped[int] = mapped_column(Integer, default=0)
     total_latency_ms: Mapped[int] = mapped_column(Integer, default=0)
 
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     feedback: Mapped[str] = mapped_column(String, default="")  # up | down | ""
     feedback_reason: Mapped[str] = mapped_column(String, default="")
 

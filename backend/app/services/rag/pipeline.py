@@ -14,6 +14,7 @@ import time
 
 from sqlalchemy.orm import Session
 
+from app.core.cache import faq_cache, make_key
 from app.services.llm.factory import get_llm_provider
 from app.services.rag.grounding import compute_grounding, extract_citations
 from app.services.rag.prompts import SYSTEM_PROMPT, build_user_prompt
@@ -32,6 +33,20 @@ def answer_question(
     timings: dict[str, int] = {}
     t0 = time.perf_counter()
 
+    # FAQ cache: only applies to fresh questions with no conversation history,
+    # since query rewriting depends on history and would make a cached answer
+    # to a follow-up question wrong for a different conversation. Skips
+    # retrieval, reranking, AND the LLM generation call entirely on a hit —
+    # this is the one that actually saves LLM quota.
+    cache_key = None
+    if not history:
+        cache_key = make_key("faq", knowledge_base_id, question, ",".join(sorted(document_ids or [])))
+        cached = faq_cache.get(cache_key)
+        if cached is not None:
+            result = dict(cached)
+            result["timings"] = {"retrieval_ms": 0, "rerank_ms": 0, "generation_ms": 0, "total_ms": 0, "cached": True}
+            return result
+
     rewritten_query = rewrite_query(question, history)
 
     t1 = time.perf_counter()
@@ -43,12 +58,14 @@ def answer_question(
     timings["rerank_ms"] = int((time.perf_counter() - t2) * 1000)
 
     t3 = time.perf_counter()
+    usage = {"input_tokens": None, "output_tokens": None}
     if not top_chunks:
         answer = "I couldn't find sufficient information about this in the uploaded documents."
     else:
         llm = get_llm_provider()
         user_prompt = build_user_prompt(question, top_chunks)
         answer = llm.generate(system=SYSTEM_PROMPT, user=user_prompt, max_tokens=1024)
+        usage = {"input_tokens": llm.last_input_tokens, "output_tokens": llm.last_output_tokens}
     timings["generation_ms"] = int((time.perf_counter() - t3) * 1000)
 
     citations = extract_citations(top_chunks, answer)
@@ -72,7 +89,7 @@ def answer_question(
         for c in candidates[:30]
     ]
 
-    return {
+    result = {
         "answer": answer,
         "rewritten_query": rewritten_query,
         "citations": citations,
@@ -83,4 +100,10 @@ def answer_question(
         "retrieved_chunks": len(top_chunks),
         "debug_trace": debug_trace,
         "timings": timings,
+        "usage": usage,
     }
+
+    if cache_key is not None:
+        faq_cache.set(cache_key, result)
+
+    return result

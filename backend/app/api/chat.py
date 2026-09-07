@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_owned_knowledge_base
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.models import Conversation, Message, User
 from app.schemas.schemas import ChatRequest, ChatResponse, ConversationOut, MessageOut
 from app.services.rag.agentic import agentic_answer
@@ -13,7 +14,8 @@ router = APIRouter(prefix="/api", tags=["chat"])
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@limiter.limit("15/minute")
+def chat(request: Request, payload: ChatRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     kb = get_owned_knowledge_base(payload.knowledge_base_id, db, user)
 
     if payload.conversation_id:
@@ -46,6 +48,7 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
         timings = result["timings"]
         debug_trace = result["debug_trace"]
 
+    usage = result.get("usage") or {}
     assistant_msg = Message(
         conversation_id=conversation.id,
         role="assistant",
@@ -60,6 +63,8 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
         rerank_latency_ms=timings.get("rerank_ms", 0),
         generation_latency_ms=timings.get("generation_ms", 0),
         total_latency_ms=timings.get("total_ms", 0),
+        input_tokens=usage.get("input_tokens"),
+        output_tokens=usage.get("output_tokens"),
     )
     db.add(assistant_msg)
     conversation.updated_at = datetime.utcnow()

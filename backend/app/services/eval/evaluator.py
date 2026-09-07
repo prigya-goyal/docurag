@@ -21,6 +21,7 @@ Metrics:
 """
 from __future__ import annotations
 
+import re
 import time
 
 from sqlalchemy.orm import Session
@@ -49,6 +50,23 @@ def _judge_answer(question: str, context_texts: list[str], answer: str) -> tuple
         return float(parsed.get("faithfulness", 0)), float(parsed.get("relevance", 0))
     except Exception:
         return 0.0, 0.0
+
+
+def _filenames_match(expected: str, actual: str) -> bool:
+    """Loose filename matching so eval questions don't have to reproduce a
+    stored filename byte-for-byte (numbering prefixes like '16. ', extra
+    spaces, or case differences shouldn't cause a false negative on an
+    otherwise-correct retrieval). Normalizes by lowercasing and stripping
+    everything except alphanumerics, then checks substring containment
+    either direction.
+    """
+    def normalize(s: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", s.lower())
+
+    exp, act = normalize(expected), normalize(actual)
+    if not exp or not act:
+        return False
+    return exp in act or act in exp
 
 
 def run_evaluation(db: Session, knowledge_base_id: str, config: dict | None = None) -> dict:
@@ -82,10 +100,14 @@ def run_evaluation(db: Session, knowledge_base_id: str, config: dict | None = No
         retrieved_pages = {(c["filename"], c["page_number"]) for c in used_chunks}
 
         if eq.is_answerable:
-            hit = eq.expected_document in retrieved_docs if eq.expected_document else bool(used_chunks)
+            hit = any(_filenames_match(eq.expected_document, d) for d in retrieved_docs) if eq.expected_document else bool(used_chunks)
             recall_hits.append(1.0 if hit else 0.0)
 
-            relevant = sum(1 for c in used_chunks if c["filename"] == eq.expected_document) if eq.expected_document else len(used_chunks)
+            relevant = (
+                sum(1 for c in used_chunks if _filenames_match(eq.expected_document, c["filename"]))
+                if eq.expected_document
+                else len(used_chunks)
+            )
             precision_scores.append(relevant / len(used_chunks) if used_chunks else 0.0)
 
             faithfulness, relevance = _judge_answer(eq.question, [c["snippet"] for c in result["citations"]] or [c.get("text", "") for c in used_chunks], result["answer"])
@@ -94,7 +116,8 @@ def run_evaluation(db: Session, knowledge_base_id: str, config: dict | None = No
 
             if eq.expected_document and eq.expected_page:
                 cited_correctly = any(
-                    c["filename"] == eq.expected_document and c["page_number"] == eq.expected_page for c in result["citations"]
+                    _filenames_match(eq.expected_document, c["filename"]) and c["page_number"] == eq.expected_page
+                    for c in result["citations"]
                 )
                 citation_scores.append(1.0 if cited_correctly else 0.0)
         else:
