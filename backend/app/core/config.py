@@ -33,10 +33,11 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: tuple[str, ...] = (".pdf", ".docx", ".pptx", ".txt", ".md", ".csv")
 
     # --- Embeddings (pluggable provider) ---
-    EMBEDDING_PROVIDER: Literal["local", "openai"] = "local"
+    EMBEDDING_PROVIDER: Literal["local", "openai", "gemini"] = "local"
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
     OPENAI_API_KEY: str | None = None
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
     # --- Reranker ---
     RERANKER_ENABLED: bool = True

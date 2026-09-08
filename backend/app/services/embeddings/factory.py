@@ -40,8 +40,12 @@ def get_embedding_provider() -> EmbeddingProvider:
         from app.services.embeddings.openai_provider import OpenAIEmbeddingProvider
 
         inner = OpenAIEmbeddingProvider(api_key=settings.OPENAI_API_KEY, model=settings.OPENAI_EMBEDDING_MODEL)
+    elif settings.EMBEDDING_PROVIDER == "gemini":
+        from app.services.embeddings.gemini_provider import GeminiEmbeddingProvider
+
+        inner = GeminiEmbeddingProvider(api_key=settings.GEMINI_API_KEY, model=settings.GEMINI_EMBEDDING_MODEL)
     else:
-        # default: local, no API key needed
+        # default: local, no API key needed (but memory-heavy — see gemini_provider.py docstring)
         from app.services.embeddings.local_provider import get_local_provider
 
         inner = get_local_provider(settings.EMBEDDING_MODEL)
