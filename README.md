@@ -141,36 +141,38 @@ flowchart TD
 
 ## 📂 Project Structure
 
+```
 docurag
 │
 ├── backend
-│ ├── app
-│ │ ├── api # route handlers
-│ │ ├── core # config, database, security, caching, rate limiting
-│ │ ├── models # SQLAlchemy models
-│ │ ├── schemas # Pydantic request/response schemas
-│ │ └── services
-│ │ ├── ingestion # extraction, OCR, chunking
-│ │ ├── embeddings # pluggable embedding providers
-│ │ ├── vectorstore # ChromaDB wrapper
-│ │ ├── retrieval # BM25, hybrid fusion, reranking, query rewriting
-│ │ ├── llm # pluggable LLM providers
-│ │ ├── rag # prompts, grounding, pipeline, agentic mode
-│ │ ├── processing # background document pipeline
-│ │ └── eval # evaluation engine
-│ ├── requirements.txt
-│ └── Dockerfile
+│   ├── app
+│   │   ├── api            # route handlers
+│   │   ├── core           # config, database, security, caching, rate limiting
+│   │   ├── models         # SQLAlchemy models
+│   │   ├── schemas        # Pydantic request/response schemas
+│   │   └── services
+│   │       ├── ingestion      # extraction, OCR, chunking
+│   │       ├── embeddings     # pluggable embedding providers
+│   │       ├── vectorstore    # ChromaDB wrapper
+│   │       ├── retrieval      # BM25, hybrid fusion, reranking, query rewriting
+│   │       ├── llm            # pluggable LLM providers
+│   │       ├── rag            # prompts, grounding, pipeline, agentic mode
+│   │       ├── processing     # background document pipeline
+│   │       └── eval           # evaluation engine
+│   ├── requirements.txt
+│   └── Dockerfile
 │
 ├── frontend
-│ ├── src
-│ │ ├── api # typed API client
-│ │ ├── components
-│ │ ├── context # auth, theme
-│ │ └── pages
-│ └── Dockerfile
+│   ├── src
+│   │   ├── api             # typed API client
+│   │   ├── components
+│   │   ├── context         # auth, theme
+│   │   └── pages
+│   └── Dockerfile
 │
 ├── docker-compose.yml
 └── README.md
+```
 
 
 ## 🚀 Getting Started
