@@ -17,8 +17,8 @@ def _is_rate_limit_error(exc: BaseException) -> bool:
 
 _retry_on_rate_limit = retry(
     retry=retry_if_exception(_is_rate_limit_error),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-    stop=stop_after_attempt(4),
+    wait=wait_exponential(multiplier=1, min=2, max=60),
+    stop=stop_after_attempt(6),
     reraise=True,
 )
 
